@@ -14,7 +14,202 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          booking_date: string
+          created_at: string
+          end_time: string
+          field_id: string
+          id: string
+          player_id: string
+          start_time: string
+          status: string | null
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          booking_date: string
+          created_at?: string
+          end_time: string
+          field_id: string
+          id?: string
+          player_id: string
+          start_time: string
+          status?: string | null
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          booking_date?: string
+          created_at?: string
+          end_time?: string
+          field_id?: string
+          id?: string
+          player_id?: string
+          start_time?: string
+          status?: string | null
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fields: {
+        Row: {
+          available: boolean | null
+          capacity: number
+          created_at: string
+          description: string | null
+          field_type: Database["public"]["Enums"]["field_type"]
+          id: string
+          image_url: string | null
+          location: string
+          name: string
+          owner_id: string
+          price_per_hour: number
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean | null
+          capacity: number
+          created_at?: string
+          description?: string | null
+          field_type?: Database["public"]["Enums"]["field_type"]
+          id?: string
+          image_url?: string | null
+          location: string
+          name: string
+          owner_id: string
+          price_per_hour: number
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean | null
+          capacity?: number
+          created_at?: string
+          description?: string | null
+          field_type?: Database["public"]["Enums"]["field_type"]
+          id?: string
+          image_url?: string | null
+          location?: string
+          name?: string
+          owner_id?: string
+          price_per_hour?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fields_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_stats: {
+        Row: {
+          created_at: string
+          games_played: number | null
+          goals_scored: number | null
+          id: string
+          is_online: boolean | null
+          joined_date: string | null
+          level: string | null
+          player_id: string
+          position: string | null
+          updated_at: string
+          wins: number | null
+        }
+        Insert: {
+          created_at?: string
+          games_played?: number | null
+          goals_scored?: number | null
+          id?: string
+          is_online?: boolean | null
+          joined_date?: string | null
+          level?: string | null
+          player_id: string
+          position?: string | null
+          updated_at?: string
+          wins?: number | null
+        }
+        Update: {
+          created_at?: string
+          games_played?: number | null
+          goals_scored?: number | null
+          id?: string
+          is_online?: boolean | null
+          joined_date?: string | null
+          level?: string | null
+          player_id?: string
+          position?: string | null
+          updated_at?: string
+          wins?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_stats_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          full_name: string
+          id: string
+          location: string | null
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          location?: string | null
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          location?: string | null
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +218,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      field_type: "football_5" | "football_7" | "football_11"
+      user_role: "player" | "owner"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +346,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      field_type: ["football_5", "football_7", "football_11"],
+      user_role: ["player", "owner"],
+    },
   },
 } as const
