@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
-import { Users, Trophy, MapPin, Calendar } from "lucide-react";
+import { Users, Trophy, MapPin, LogOut, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navbar = () => {
   const [activeRole, setActiveRole] = useState<'player' | 'owner' | null>(null);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b">
@@ -30,30 +33,42 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center space-x-3">
-            {!activeRole ? (
-              <>
-                <Button variant="ghost">Iniciar Sesión</Button>
-                <Button variant="hero">Registrarse</Button>
-              </>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Button 
-                  variant={activeRole === 'player' ? 'player' : 'ghost'} 
-                  size="sm"
-                  onClick={() => setActiveRole('player')}
-                >
-                  <Users className="w-4 h-4 mr-1" />
-                  Jugador
-                </Button>
-                <Button 
-                  variant={activeRole === 'owner' ? 'owner' : 'ghost'} 
-                  size="sm"
-                  onClick={() => setActiveRole('owner')}
-                >
-                  <MapPin className="w-4 h-4 mr-1" />
-                  Propietario
+            {user ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-muted-foreground hidden md:block">
+                  Hola, {user.user_metadata?.full_name || user.email}
+                </span>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant={activeRole === 'player' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setActiveRole('player')}
+                  >
+                    <Users className="w-4 h-4 mr-1" />
+                    Jugador
+                  </Button>
+                  <Button 
+                    variant={activeRole === 'owner' ? 'default' : 'ghost'} 
+                    size="sm"
+                    onClick={() => setActiveRole('owner')}
+                  >
+                    <MapPin className="w-4 h-4 mr-1" />
+                    Propietario
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" onClick={signOut}>
+                  <LogOut className="w-4 h-4" />
                 </Button>
               </div>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate('/auth')}>
+                  Iniciar Sesión
+                </Button>
+                <Button variant="default" onClick={() => navigate('/auth')}>
+                  Registrarse
+                </Button>
+              </>
             )}
           </div>
         </div>
