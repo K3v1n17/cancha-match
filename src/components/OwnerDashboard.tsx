@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
 import { Plus, MapPin, DollarSign, Users, Clock, Settings, ImageIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,6 +56,8 @@ const OwnerDashboard = () => {
     description: '',
     image_url: ''
   });
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -103,6 +106,49 @@ const OwnerDashboard = () => {
     }
   };
 
+  const uploadImage = async (file: File): Promise<string> => {
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}${Date.now()}.${fileExt}`;
+      const filePath = `fields/${fileName}`;
+
+      // Simular progreso de carga
+      const interval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 95) {
+            clearInterval(interval);
+            return prev;
+          }
+          return prev + 5;
+        });
+      }, 100);
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('field-images')
+        .upload(filePath, file);
+
+      clearInterval(interval);
+      setUploadProgress(100);
+
+      if (uploadError) throw uploadError;
+
+      // Obtener la URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('field-images')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleCreateField = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -122,6 +168,21 @@ const OwnerDashboard = () => {
         return;
       }
 
+      let imageUrl = newField.image_url;
+      const imageInput = document.getElementById('image_upload') as HTMLInputElement;
+      if (imageInput?.files?.length) {
+        try {
+          imageUrl = await uploadImage(imageInput.files[0]);
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "No se pudo subir la imagen",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('fields')
         .insert({
@@ -131,7 +192,7 @@ const OwnerDashboard = () => {
           field_type: newField.field_type,
           capacity: parseInt(newField.capacity),
           description: newField.description,
-          image_url: newField.image_url,
+          image_url: imageUrl,
           owner_id: profile.id
         });
 
@@ -324,14 +385,30 @@ const OwnerDashboard = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="image_url">URL de la Imagen</Label>
+                      <Label htmlFor="image_upload">Imagen de la Cancha</Label>
                       <Input
-                        id="image_url"
-                        type="url"
-                        value={newField.image_url}
-                        onChange={(e) => setNewField({...newField, image_url: e.target.value})}
-                        placeholder="https://..."
+                        id="image_upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            // Preview de la imagen si lo deseas
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setNewField({...newField, image_url: event.target?.result as string});
+                            };
+                            reader.readAsDataURL(e.target.files[0]);
+                          }
+                        }}
                       />
+                      {isUploading && (
+                        <div className="mt-2">
+                          <Progress value={uploadProgress} className="w-full" />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Subiendo imagen... {uploadProgress}%
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div>
