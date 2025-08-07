@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, MapPin, Users, Star, Trophy, Target, Timer } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { BookingDialog } from './BookingDialog';
+import { useToast } from "@/components/ui/use-toast";
 
 interface PlayerStats {
   games_played: number;
@@ -27,11 +29,27 @@ interface Field {
   description: string;
 }
 
+interface Booking {
+  id: string;
+  field_id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  total_price: number;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  created_at: string;
+  field: Field;
+}
+
 const PlayerDashboard = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [availableFields, setAvailableFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedField, setSelectedField] = useState<Field | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [userBookings, setUserBookings] = useState<Booking[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -39,6 +57,62 @@ const PlayerDashboard = () => {
       fetchAvailableFields();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (playerId) {
+      fetchUserBookings();
+    }
+  }, [playerId]);
+
+  const fetchUserBookings = async () => {
+    try {
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          field:fields (*)
+        `)
+        .eq('player_id', playerId)
+        .order('booking_date', { ascending: true });
+
+      if (error) throw error;
+      
+      const typedBookings = (bookings || []).map(booking => ({
+        ...booking,
+        status: booking.status as 'pending' | 'confirmed' | 'cancelled' | 'completed'
+      }));
+      
+      setUserBookings(typedBookings);
+    } catch (error) {
+      console.error('Error fetching user bookings:', error);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', bookingId);
+
+      if (error) throw error;
+
+      // Actualizar la lista de reservas
+      fetchUserBookings();
+      
+      toast({
+        title: "Reserva cancelada",
+        description: "La reserva ha sido cancelada exitosamente",
+      });
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo cancelar la reserva",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchPlayerData = async () => {
     try {
@@ -49,6 +123,7 @@ const PlayerDashboard = () => {
         .single();
 
       if (profile) {
+        setPlayerId(profile.id);
         const { data: stats } = await supabase
           .from('player_stats')
           .select('*')
@@ -94,8 +169,9 @@ const PlayerDashboard = () => {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="profile">Mi Perfil</TabsTrigger>
+          <TabsTrigger value="bookings">Mis Reservas</TabsTrigger>
           <TabsTrigger value="fields">Reservar Canchas</TabsTrigger>
         </TabsList>
 
@@ -174,6 +250,71 @@ const PlayerDashboard = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="bookings" className="space-y-6">
+          <div className="grid grid-cols-1 gap-4">
+            {userBookings.map((booking) => (
+              <Card key={booking.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">{booking.field.name}</CardTitle>
+                      <CardDescription className="flex items-center mt-1">
+                        <MapPin className="w-4 h-4 mr-1" />
+                        {booking.field.location}
+                      </CardDescription>
+                    </div>
+                    <Badge
+                      variant={
+                        booking.status === 'cancelled'
+                          ? 'destructive'
+                          : booking.status === 'confirmed'
+                          ? 'default'
+                          : 'secondary'
+                      }
+                    >
+                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Fecha:</span>
+                      <span>{new Date(booking.booking_date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Horario:</span>
+                      <span>
+                        {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Precio Total:</span>
+                      <span className="font-medium">${booking.total_price}</span>
+                    </div>
+                    {booking.status === 'pending' && (
+                      <Button variant="destructive" className="w-full mt-4" onClick={() => handleCancelBooking(booking.id)}>
+                        Cancelar Reserva
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {userBookings.length === 0 && (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No tienes reservas</h3>
+                  <p className="text-muted-foreground">
+                    Aún no has realizado ninguna reserva de cancha.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
         <TabsContent value="fields" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {availableFields.map((field) => (
@@ -219,7 +360,10 @@ const PlayerDashboard = () => {
                     {field.description && (
                       <p className="text-sm text-muted-foreground">{field.description}</p>
                     )}
-                    <Button className="w-full mt-4">
+                    <Button 
+                      className="w-full mt-4"
+                      onClick={() => setSelectedField(field)}
+                    >
                       <Calendar className="w-4 h-4 mr-2" />
                       Reservar Cancha
                     </Button>
@@ -242,6 +386,15 @@ const PlayerDashboard = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {selectedField && playerId && (
+        <BookingDialog
+          isOpen={!!selectedField}
+          onClose={() => setSelectedField(null)}
+          field={selectedField}
+          playerId={playerId}
+        />
+      )}
     </div>
   );
 };
