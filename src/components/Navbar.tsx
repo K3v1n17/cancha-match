@@ -1,11 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { Users, Trophy, MapPin, LogOut, User } from "lucide-react";
+import { Trophy, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 const Navbar = () => {
-  const [activeRole, setActiveRole] = useState<'player' | 'owner' | null>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -38,24 +36,6 @@ const Navbar = () => {
                 <span className="text-sm text-muted-foreground hidden md:block">
                   Hola, {user.user_metadata?.full_name || user.email}
                 </span>
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    variant={activeRole === 'player' ? 'default' : 'ghost'} 
-                    size="sm"
-                    onClick={() => setActiveRole('player')}
-                  >
-                    <Users className="w-4 h-4 mr-1" />
-                    Jugador
-                  </Button>
-                  <Button 
-                    variant={activeRole === 'owner' ? 'default' : 'ghost'} 
-                    size="sm"
-                    onClick={() => setActiveRole('owner')}
-                  >
-                    <MapPin className="w-4 h-4 mr-1" />
-                    Propietario
-                  </Button>
-                </div>
                 <Button variant="outline" size="sm" onClick={signOut}>
                   <LogOut className="w-4 h-4" />
                 </Button>
